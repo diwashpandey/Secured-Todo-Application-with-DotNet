@@ -1,6 +1,10 @@
+// Imports from dotnet
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+
+// Imports from application
 using TodoApi.Models;
+using TodoApi.Settings;
 
 namespace TodoApi.Contexts;
 
@@ -8,6 +12,7 @@ namespace TodoApi.Contexts;
 public class TodoDBContext
 {
     private readonly IMongoCollection<Todo> _todoCollection;
+    private readonly IMongoCollection<User> _userCollection;
     
     public TodoDBContext(IOptions<TodoDatabaseSettings> todoDatabaseSettings){
 
@@ -17,9 +22,11 @@ public class TodoDBContext
         // Selecting database of Todo
         var database = mongoClient.GetDatabase(todoDatabaseSettings.Value.DatabaseName);
 
-        // Getting and setting the collection of Todos from the database
-        _todoCollection = database.GetCollection<Todo>(todoDatabaseSettings.Value.DatabaseName);
+        // Getting and setting the collection of Todos and Users from the database
+        _todoCollection = database.GetCollection<Todo>(todoDatabaseSettings.Value.TodosCollectionName);
+        _userCollection = database.GetCollection<User>(todoDatabaseSettings.Value.UserCollectionName);
     }
 
     public IMongoCollection<Todo> Todos => _todoCollection; // Returns Collection of Todo
+    public IMongoCollection<User> Users => _userCollection; // Returns Collection of User
 }

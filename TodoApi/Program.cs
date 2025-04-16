@@ -19,6 +19,7 @@ builder.Services.AddSingleton<TodoDBContext>();
 
 // Adding Services to the builder
 builder.Services.AddScoped<TodoService>();
+builder.Services.AddScoped<UserAuthServices>();
 
 builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", options => {
 
