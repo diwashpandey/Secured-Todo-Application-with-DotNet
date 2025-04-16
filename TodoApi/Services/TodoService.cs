@@ -1,4 +1,3 @@
-using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using TodoApi.Contexts;
 using TodoApi.Models;
@@ -38,14 +37,13 @@ public class TodoService
         var filter = Builders<Todo>.Filter.Eq("id", id);
         var update = Builders<Todo>.Update.Set(fieldName, data);
         var result = _todoCollection.UpdateOne(filter, update);
-
+        
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
 
     public bool DeleteTodo(string id)
     {
         var result = _todoCollection.DeleteOne(todo=> todo.Id == id);
-
         return result.DeletedCount > 0;
     }
 }

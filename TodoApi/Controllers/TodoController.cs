@@ -31,7 +31,7 @@ public class TodoController : ControllerBase
 
     [HttpDelete]
     public ActionResult<string> RemoveTodo([FromBody] DeleteTodoRequest req){
-        bool success = _todoService.DeleteTodo(req.id);
+        bool success = _todoService.DeleteTodo(req.Id);
         return success ? Ok("Todo Deleted!") : BadRequest("Error occured!");
     }
 
