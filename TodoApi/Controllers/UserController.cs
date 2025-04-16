@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.DTOs;
 using TodoApi.Services;
@@ -7,23 +6,26 @@ namespace TodoApi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class UserLoginController : ControllerBase
+public class UserController : ControllerBase
 {
     private readonly UserAuthServices _userAuthServices;
 
-    public UserLoginController(UserAuthServices userAuthServices)
+    public UserController(UserAuthServices userAuthServices)
     {
         _userAuthServices = userAuthServices;
     }
 
-    [HttpPost]
-    public IActionResult Login(LoginRequest user)
+    [HttpPost("login")]
+    public async Task<LoginResponse> Login([FromBody] LoginRequest user)
+    {  
+        // This service verifies the user and returns tokens if valid
+        return await _userAuthServices.LoginUser(user);
+    }
+
+    [HttpPost("signup")]
+    public async Task<SignupResponse> SignupUser([FromBody] SignupRequest userData)
     {
-        LoginResponse result =  _userAuthServices.LoginUser(user);
-
-        if (result.Authenticated) return Ok(result);
-
-        return BadRequest("Credentials doesn't match!");
-
+        return await _userAuthServices.RegisterUser(userData);
     }
 }
+
