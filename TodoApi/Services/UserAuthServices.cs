@@ -1,116 +1,101 @@
-// Imports from DotNet
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-
-// Imports from External Libraries
 using MongoDB.Driver;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
-
-// Imports from application
+using System.Text;
 using TodoApi.Contexts;
 using TodoApi.Models;
 using TodoApi.Settings;
 using TodoApi.DTOs;
 
-
 namespace TodoApi.Services;
 
-public class UserAuthServices
+public class UserAuthService
 {
     private readonly IMongoCollection<User> _userCollection;
     private readonly JWTSettings _jwtSettings;
-    private readonly PasswordHasher<User> hasher = new PasswordHasher<User>();
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
-    public UserAuthServices(TodoDBContext todoDBContext, IOptions<JWTSettings> jwtSettings)
+    public UserAuthService(TodoDBContext context, IOptions<JWTSettings> jwtOptions)
     {
-        _userCollection = todoDBContext.Users;
-        _jwtSettings = jwtSettings.Value;
+        _userCollection = context.Users;
+        _jwtSettings = jwtOptions.Value;
     }
 
-    private async Task<bool> ValidateUserCredentials(string _username, string _password)
+    private async Task<bool> IsValidUserAsync(string username, string password)
     {
-        // Pulling User from DB
-        User user = await _userCollection.Find(u => u.Username == _username).FirstOrDefaultAsync();
+        var user = await _userCollection.Find(u => u.Username == username).FirstOrDefaultAsync();
+        if (user == null) return false;
 
-        if (user == null) return false; // Check if user exists or not
-        
-        // Compares and varifies the user password
-        PasswordVerificationResult result = hasher.VerifyHashedPassword(user, user.HashedPassword, _password);
-
-        if (result == PasswordVerificationResult.Failed) return false;
-        
-        return true;
+        var result = _passwordHasher.VerifyHashedPassword(user, user.HashedPassword, password);
+        return result == PasswordVerificationResult.Success;
     }
 
-    public async Task<SignupResponse> RegisterUser([FromBody] SignupRequest userData)
+    private string GenerateJwtToken(string username, DateTime expiresAt)
     {
-        
-        // Check if user with the same username exists or not
-        bool userExists = await _userCollection.Find(u => u.Username == userData.Username).AnyAsync();
-
-        // Return Failed status with message if username already exists
-        if (userExists) return new SignupResponse{
-            SuccessStatus = false,
-            MessageToClient = "Username already exists"
-        };
-
-        // Encrypt the password using hasher
-        string hashedPassword = hasher.HashPassword(null, userData.RawPassword);
-        // Creating new user model
-        User newUser = new User {
-            Username = userData.Username,
-            HashedPassword = hashedPassword,
-            Email = userData.Email
-        };
-
-        // Inserting the user model to the database
-        await _userCollection.InsertOneAsync(newUser);
-
-        // Returns the success result
-        return new SignupResponse{
-            SuccessStatus = true
-        };
-    }
-
-    public async Task<LoginResponse> LoginUser([FromBody] LoginRequest user){
-
-        if (! await this.ValidateUserCredentials(user.Username, user.Password))
-            return new LoginResponse{
-            AccessToken = null,
-            RefreshToken = null,
-            Authenticated = false
-        };
-        
-        // Rest of the code
-        var claims = new [] {
-            new Claim(ClaimTypes.Name, user.Username)
-        };
-
+        var claims = new[] { new Claim(ClaimTypes.Name, username) };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Creating the access token
-        var accessToken = new JwtSecurityToken(
+        var token = new JwtSecurityToken(
             issuer: _jwtSettings.ValidIssuer,
             audience: _jwtSettings.ValidAudience,
             claims: claims,
-            expires: DateTime.Now.AddMinutes(15),
-            signingCredentials: creds
+            expires: expiresAt,
+            signingCredentials: credentials
         );
-        // Convert the access token to the string format
-        var newAccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken);
 
-        // Create refresh token
-        var refreshToken = Guid.NewGuid().ToString();
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
-        return new LoginResponse{
-            AccessToken = newAccessToken,
-            RefreshToken = refreshToken,
-            Authenticated = true
+    public async Task<SignupResponse> RegisterUserAsync([FromBody] SignupRequest request)
+    {
+        var userExists = await _userCollection.Find(u => u.Username == request.Username).AnyAsync();
+        if (userExists)
+        {
+            return new SignupResponse
+            {
+                SuccessStatus = false,
+                MessageToClient = "Username already exists"
+            };
+        }
+
+        var hashedPassword = _passwordHasher.HashPassword(null, request.RawPassword);
+        var newUser = new User
+        {
+            Username = request.Username,
+            HashedPassword = hashedPassword,
+            Email = request.Email
+        };
+
+        await _userCollection.InsertOneAsync(newUser);
+
+        return new SignupResponse { SuccessStatus = true };
+    }
+
+    public async Task<LoginResponse> LoginUserAsync([FromBody] LoginRequest request)
+    {
+        if (!await IsValidUserAsync(request.Username, request.Password))
+        {
+            return new LoginResponse
+            {
+                Authenticated = false,
+                AccessToken = null,
+                RefreshToken = null
+            };
+        }
+
+        var accessToken = GenerateJwtToken(request.Username, DateTime.Now.AddMinutes(15));
+        var refreshToken = Guid.NewGuid().ToString(); // Ideally, store this securely.
+
+        return new LoginResponse
+        {
+            Authenticated = true,
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
         };
     }
 }
