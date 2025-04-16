@@ -31,26 +31,54 @@ public class UserAuthServices
         _jwtSettings = jwtSettings.Value;
     }
 
-    private bool ValidateUserCredentials(string _username, string _password)
+    private async Task<bool> ValidateUserCredentials(string _username, string _password)
     {
         // Pulling User from DB
-        User user = _userCollection.Find(u => u.Username == _username).FirstOrDefault();
+        User user = await _userCollection.Find(u => u.Username == _username).FirstOrDefaultAsync();
 
         if (user == null) return false; // Check if user exists or not
-
+        
+        // Compares and varifies the user password
         PasswordVerificationResult result = hasher.VerifyHashedPassword(user, user.HashedPassword, _password);
 
         if (result == PasswordVerificationResult.Failed) return false;
         
         return true;
-
     }
 
-    public LoginResponse LoginUser(LoginRequest user){
+    public async Task<SignupResponse> RegisterUser([FromBody] SignupRequest userData)
+    {
+        
+        // Check if user with the same username exists or not
+        bool userExists = await _userCollection.Find(u => u.Username == userData.Username).AnyAsync();
 
-        Console.WriteLine($"Name is {user.Username} and Password is {user.Password}");
+        // Return Failed status with message if username already exists
+        if (userExists) return new SignupResponse{
+            SuccessStatus = false,
+            MessageToClient = "Username already exists"
+        };
 
-        if (! this.ValidateUserCredentials(user.Username, user.Password))
+        // Encrypt the password using hasher
+        string hashedPassword = hasher.HashPassword(null, userData.RawPassword);
+        // Creating new user model
+        User newUser = new User {
+            Username = userData.Username,
+            HashedPassword = hashedPassword,
+            Email = userData.Email
+        };
+
+        // Inserting the user model to the database
+        await _userCollection.InsertOneAsync(newUser);
+
+        // Returns the success result
+        return new SignupResponse{
+            SuccessStatus = true
+        };
+    }
+
+    public async Task<LoginResponse> LoginUser([FromBody] LoginRequest user){
+
+        if (! await this.ValidateUserCredentials(user.Username, user.Password))
             return new LoginResponse{
             AccessToken = null,
             RefreshToken = null,
