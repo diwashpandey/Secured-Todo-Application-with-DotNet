@@ -8,6 +8,9 @@ public class Todo
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id {get; set;} = string.Empty;
+    
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId{get;set;} = string.Empty;
     public string Description { get; set; } = string.Empty;
     public DateTime? DeadLine {get; set;} 
     public DateTime? CompletedTime {get; set;} // Carries the date of completion if completed
