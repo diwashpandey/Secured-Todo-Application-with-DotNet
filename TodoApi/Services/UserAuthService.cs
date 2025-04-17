@@ -25,9 +25,8 @@ public class UserAuthService
         _jwtSettings = jwtOptions.Value;
     }
 
-    private async Task<bool> IsValidUserAsync(string username, string password)
+    private bool IsValidUserAsync(User user, string password)
     {
-        var user = await _userCollection.Find(u => u.Username == username).FirstOrDefaultAsync();
         if (user == null) return false;
 
         var result = _passwordHasher.VerifyHashedPassword(user, user.HashedPassword, password);
@@ -78,7 +77,10 @@ public class UserAuthService
 
     public async Task<LoginResponse> LoginUserAsync([FromBody] LoginRequest request)
     {
-        if (!await IsValidUserAsync(request.Username, request.Password))
+        User user = await _userCollection.Find(u => u.Username == request.Username).FirstOrDefaultAsync();
+
+        // This Authenticates user
+        if (! this.IsValidUserAsync(user, request.Password))
         {
             return new LoginResponse
             {
@@ -88,8 +90,16 @@ public class UserAuthService
             };
         }
 
+        // Generate Access Token
         var accessToken = GenerateJwtToken(request.Username, DateTime.Now.AddMinutes(15));
-        var refreshToken = Guid.NewGuid().ToString(); // Ideally, store this securely.
+        // Generate random GUID token as refresh token
+        var refreshToken = Guid.NewGuid().ToString();
+        
+        // Inserting the Token to the user databse
+        var update = Builders<User>.Update
+                        .Set(u => u.RefreshToken, refreshToken)
+                        .Set(u=> u.TokenExpiryTime, DateTime.Now.AddDays(7));
+        await _userCollection.UpdateOneAsync(u => u.Username == user.Username, update);
 
         return new LoginResponse
         {
@@ -97,5 +107,25 @@ public class UserAuthService
             AccessToken = accessToken,
             RefreshToken = refreshToken
         };
+    }
+
+    public async Task<RenewTokenResponse> RenewAccessTokenAsync(RenewTokenRequest renewTokenRequest)
+    {
+        RenewTokenResponse renewTokenResponse = new();
+        
+        var filter = Builders<User>.Filter.And(
+            Builders<User>.Filter.Eq(u=> u.Username, renewTokenRequest.Username),
+            Builders<User>.Filter.Eq(u=> u.RefreshToken, renewTokenRequest.RefreshToken)
+        );
+
+        User user = await _userCollection.Find(filter).FirstOrDefaultAsync();
+
+        // return false response if no user found or the token is expired
+        if (user==null || user.TokenExpiryTime < DateTime.Now) return renewTokenResponse; // SuccessStatus if false in default
+        
+        renewTokenResponse.NewAccessToken = this.GenerateJwtToken(user.Username, DateTime.Now.AddMinutes(15));
+        renewTokenResponse.SuccessStatus = true;
+
+        return renewTokenResponse;
     }
 }

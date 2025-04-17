@@ -10,9 +10,9 @@ public class UserController : ControllerBase
 {
     private readonly UserAuthService _userAuthService;
 
-    public UserController(UserAuthService userAuthServices)
+    public UserController(UserAuthService userAuthService)
     {
-        _userAuthService = userAuthServices;
+        _userAuthService = userAuthService;
     }
 
     [HttpPost("login")]
@@ -26,5 +26,10 @@ public class UserController : ControllerBase
     public async Task<SignupResponse> SignupUser([FromBody] SignupRequest userData)
     {
         return await _userAuthService.RegisterUserAsync(userData);
+    }
+
+    [HttpPost("renew-access")]
+    public async Task<RenewTokenResponse> RenewToken([FromBody] RenewTokenRequest renewTokenRequest){
+        return await _userAuthService.RenewAccessTokenAsync(renewTokenRequest);
     }
 }
