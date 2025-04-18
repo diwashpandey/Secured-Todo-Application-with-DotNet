@@ -1,4 +1,4 @@
-namespace TodoApi.DTOs;
+namespace TodoApi.DTOs.UserDTOs;
 public class SignupRequest
 {
     public string Username {get; set;} = string.Empty;

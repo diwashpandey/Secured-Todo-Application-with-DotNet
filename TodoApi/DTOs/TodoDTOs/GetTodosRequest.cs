@@ -1,6 +1,6 @@
 using TodoApi.Models;
 
-namespace TodoApi.DTOs;
+namespace TodoApi.DTOs.TodoDTOs;
 
 public class GetTodosResponse
 {

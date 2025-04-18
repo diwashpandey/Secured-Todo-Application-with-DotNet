@@ -1,4 +1,4 @@
-namespace TodoApi.DTOs;
+namespace TodoApi.DTOs.TodoDTOs;
 public class UpdateTodoRequest
 {
     public string id {get; set;} = string.Empty;

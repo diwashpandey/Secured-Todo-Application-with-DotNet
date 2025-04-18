@@ -1,4 +1,4 @@
-namespace TodoApi.DTOs;
+namespace TodoApi.DTOs.UserDTOs;
 
 public class LoginRequest
 {
