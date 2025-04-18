@@ -3,6 +3,7 @@ using TodoApi.Models;
 using TodoApi.DTOs.TodoDTOs;
 using Microsoft.AspNetCore.Authorization;
 using TodoApi.Common;
+using System.Threading.Tasks;
 
 namespace TodoApi.Controllers;
 
@@ -20,7 +21,6 @@ public class TodoController : CustomControllerBase
     [HttpGet]
     public async Task<GetTodosResponse> GetTodosByUser()
     {
-        string? userId = User.FindFirst("UserId")?.Value;
         return await _todoService.GetTodosByUserAsync(this.GetUserId());
     }
 
@@ -28,19 +28,17 @@ public class TodoController : CustomControllerBase
     [HttpPost]
     public async Task<PostTodoResponse> PostTodo([FromBody] PostTodoRequest todoData)
     {
-        string? userId = User.FindFirst("UserId")?.Value;
         return await _todoService.AddTodoAsync(this.GetUserId(), todoData);
     }
 
     [Authorize]
     [HttpDelete]
-    public ActionResult<string> RemoveTodo([FromBody] DeleteTodoRequest req){
-        bool success = _todoService.DeleteTodo(req.Id);
+    public async Task<ActionResult<string>> RemoveTodo([FromBody] DeleteTodoRequest req){
 
         string? userId =this.GetUserId();
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        bool success = _todoService.DeleteTodo(userId, req.Id);
+        bool success = await _todoService.DeleteTodoAsync(userId, req.Id);
 
         return success ? Ok("Todo Deleted!") : BadRequest("Error occured!");
     }

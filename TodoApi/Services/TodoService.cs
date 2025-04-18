@@ -55,9 +55,14 @@ public class TodoService
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
 
-    public bool DeleteTodo(string id)
+    public async Task<bool> DeleteTodoAsync(string userId, string id)
     {
-        var result = _todoCollection.DeleteOne(todo=> todo.Id == id);
+        var filter = Builders<Todo>.Filter.And(
+          Builders<Todo>.Filter.Eq(t => t.UserId, userId),  
+          Builders<Todo>.Filter.Eq(t => t.Id, id)  
+        );
+
+        var result =await _todoCollection.DeleteOneAsync(filter);
         return result.DeletedCount > 0;
     }
 }
