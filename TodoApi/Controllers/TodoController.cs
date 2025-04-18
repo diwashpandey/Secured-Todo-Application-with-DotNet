@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using TodoApi.Models;
 using TodoApi.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Threading.Tasks;
 
 namespace TodoApi.Controllers;
 
@@ -15,18 +17,20 @@ public class TodoController : ControllerBase
         _todoService = todoService;
     }
 
+    [Authorize]
     [HttpGet]
-    public ActionResult<IEnumerable<Todo>> GetTodos()
+    public async Task<GetTodosResponse> GetTodosByUser()
     {
-        List<Todo> todos = _todoService.FindAllTodos();
-        return todos;
+        string? userId = User.FindFirst("UserId")?.Value;
+        return await _todoService.GetTodosByUserAsync(userId);
     }
 
+    [Authorize]
     [HttpPost]
-    public IActionResult PostTodo([FromBody] Todo todo)
+    public async Task<PostTodoResponse> PostTodo([FromBody] PostTodoRequest todoData)
     {
-        bool success = _todoService.InsertTodo(todo);
-        return success ? Ok("Todo inserted successfully!") : BadRequest("Error inserting Todo!");
+        string? userId = User.FindFirst("UserId")?.Value;
+        return await _todoService.AddTodoAsync(userId, todoData);
     }
 
     [HttpDelete]

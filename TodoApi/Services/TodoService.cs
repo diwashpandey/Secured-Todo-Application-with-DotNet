@@ -1,5 +1,8 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using TodoApi.Contexts;
+using TodoApi.DTOs;
 using TodoApi.Models;
 
 public class TodoService
@@ -11,17 +14,32 @@ public class TodoService
     }
     // This is fills out the readonly _todoCollections;
 
-    public List<Todo> FindAllTodos(){
-        return _todoCollection.Find(_ => true).ToList();
+    public async Task<GetTodosResponse> GetTodosByUserAsync(string? userId)
+    {
+        var filter = Builders<Todo>.Filter.Eq(todo => todo.UserId, userId);
+        List<Todo> todos =  await _todoCollection.Find(filter).ToListAsync();
+        return new GetTodosResponse{Todos = todos};
     }
 
-    public bool InsertTodo(Todo todo){
-
-        if(todo==null) return false;
+    public async Task<PostTodoResponse> AddTodoAsync(string userId, PostTodoRequest todoData){
         
-        _todoCollection.InsertOne(todo);
-
-        return true;
+        PostTodoResponse postTodoResponse = new();
+        if( todoData.Description==null || todoData.Description == ""){
+            postTodoResponse.MessageToClient = "Description must be provided!";
+        }
+        else if (userId==null){
+            postTodoResponse.MessageToClient = "Invalid userId";
+        }
+        else{
+            Todo newTodo = new() {
+                UserId = userId,
+                Description = todoData.Description,
+                DeadLine = todoData.DeadLine ?? null
+            };
+            await _todoCollection.InsertOneAsync(newTodo);
+            postTodoResponse.SuccessStatus = true;
+        }
+        return postTodoResponse;
     }
 
     public bool UpdateFullTodo(Todo newTodo){
