@@ -1,8 +1,6 @@
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using TodoApi.Contexts;
-using TodoApi.DTOs;
+using TodoApi.DTOs.TodoDTOs;
 using TodoApi.Models;
 
 public class TodoService
@@ -12,7 +10,6 @@ public class TodoService
     {
         _todoCollection = context.Todos;
     }
-    // This is fills out the readonly _todoCollections;
 
     public async Task<GetTodosResponse> GetTodosByUserAsync(string? userId)
     {
@@ -44,7 +41,6 @@ public class TodoService
 
     public bool UpdateFullTodo(Todo newTodo){
         if (newTodo==null) return false;
-
         var result = _todoCollection.ReplaceOne(todo => todo.Id == newTodo.Id, newTodo);
 
         return result.IsAcknowledged && result.ModifiedCount > 0;

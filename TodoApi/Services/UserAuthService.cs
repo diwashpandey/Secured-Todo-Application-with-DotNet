@@ -9,7 +9,7 @@ using System.Text;
 using TodoApi.Contexts;
 using TodoApi.Models;
 using TodoApi.Settings;
-using TodoApi.DTOs;
+using TodoApi.DTOs.UserDTOs;
 
 namespace TodoApi.Services;
 
@@ -83,7 +83,6 @@ public class UserAuthService
     {
         User user = await _userCollection.Find(u => u.Username == request.Username).FirstOrDefaultAsync();
 
-        // This Authenticates user
         if (! this.IsValidUserAsync(user, request.Password))
         {
             return new LoginResponse
@@ -94,12 +93,9 @@ public class UserAuthService
             };
         }
 
-        // Generate Access Token
         var accessToken = GenerateJwtToken(user, DateTime.Now.AddMinutes(15));
-        // Generate random GUID token as refresh token
         var refreshToken = Guid.NewGuid().ToString();
         
-        // Inserting the Token to the user databse
         var update = Builders<User>.Update
                         .Set(u => u.RefreshToken, refreshToken)
                         .Set(u=> u.TokenExpiryTime, DateTime.Now.AddDays(7));
@@ -124,8 +120,7 @@ public class UserAuthService
 
         User user = await _userCollection.Find(filter).FirstOrDefaultAsync();
 
-        // return false response if no user found or the token is expired
-        if (user==null || user.TokenExpiryTime < DateTime.Now) return renewTokenResponse; // SuccessStatus if false in default
+        if (user==null || user.TokenExpiryTime < DateTime.Now) return renewTokenResponse;
         
         renewTokenResponse.NewAccessToken = this.GenerateJwtToken(user, DateTime.Now.AddMinutes(15));
         renewTokenResponse.SuccessStatus = true;

@@ -1,15 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
 using TodoApi.Models;
-using TodoApi.DTOs;
+using TodoApi.DTOs.TodoDTOs;
 using Microsoft.AspNetCore.Authorization;
-using System.Threading.Tasks;
+using TodoApi.Common;
 
 namespace TodoApi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class TodoController : ControllerBase
+public class TodoController : CustomControllerBase
 {
     private readonly TodoService _todoService;
 
@@ -22,7 +21,7 @@ public class TodoController : ControllerBase
     public async Task<GetTodosResponse> GetTodosByUser()
     {
         string? userId = User.FindFirst("UserId")?.Value;
-        return await _todoService.GetTodosByUserAsync(userId);
+        return await _todoService.GetTodosByUserAsync(this.GetUserId());
     }
 
     [Authorize]
@@ -30,12 +29,19 @@ public class TodoController : ControllerBase
     public async Task<PostTodoResponse> PostTodo([FromBody] PostTodoRequest todoData)
     {
         string? userId = User.FindFirst("UserId")?.Value;
-        return await _todoService.AddTodoAsync(userId, todoData);
+        return await _todoService.AddTodoAsync(this.GetUserId(), todoData);
     }
 
+    [Authorize]
     [HttpDelete]
     public ActionResult<string> RemoveTodo([FromBody] DeleteTodoRequest req){
         bool success = _todoService.DeleteTodo(req.Id);
+
+        string? userId =this.GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        bool success = _todoService.DeleteTodo(userId, req.Id);
+
         return success ? Ok("Todo Deleted!") : BadRequest("Error occured!");
     }
 

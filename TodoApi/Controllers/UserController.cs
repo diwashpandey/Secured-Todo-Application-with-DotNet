@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using TodoApi.DTOs;
+using TodoApi.DTOs.UserDTOs;
+using TodoApi.Common;
 using TodoApi.Services;
 
 namespace TodoApi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class UserController : ControllerBase
+public class UserController : CustomControllerBase
 {
     private readonly UserAuthService _userAuthService;
 
