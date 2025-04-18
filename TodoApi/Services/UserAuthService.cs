@@ -33,9 +33,13 @@ public class UserAuthService
         return result == PasswordVerificationResult.Success;
     }
 
-    private string GenerateJwtToken(string username, DateTime expiresAt)
+    private string GenerateJwtToken(User user, DateTime expiresAt)
     {
-        var claims = new[] { new Claim(ClaimTypes.Name, username) };
+        var claims = new[] {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim("UserId", user.Id)
+        };
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -62,13 +66,13 @@ public class UserAuthService
             };
         }
 
-        var hashedPassword = _passwordHasher.HashPassword(null, request.RawPassword);
         var newUser = new User
         {
             Username = request.Username,
-            HashedPassword = hashedPassword,
             Email = request.Email
         };
+        var hashedPassword = _passwordHasher.HashPassword(newUser, request.RawPassword);
+        newUser.HashedPassword = hashedPassword;
 
         await _userCollection.InsertOneAsync(newUser);
 
@@ -91,7 +95,7 @@ public class UserAuthService
         }
 
         // Generate Access Token
-        var accessToken = GenerateJwtToken(request.Username, DateTime.Now.AddMinutes(15));
+        var accessToken = GenerateJwtToken(user, DateTime.Now.AddMinutes(15));
         // Generate random GUID token as refresh token
         var refreshToken = Guid.NewGuid().ToString();
         
@@ -123,7 +127,7 @@ public class UserAuthService
         // return false response if no user found or the token is expired
         if (user==null || user.TokenExpiryTime < DateTime.Now) return renewTokenResponse; // SuccessStatus if false in default
         
-        renewTokenResponse.NewAccessToken = this.GenerateJwtToken(user.Username, DateTime.Now.AddMinutes(15));
+        renewTokenResponse.NewAccessToken = this.GenerateJwtToken(user, DateTime.Now.AddMinutes(15));
         renewTokenResponse.SuccessStatus = true;
 
         return renewTokenResponse;
