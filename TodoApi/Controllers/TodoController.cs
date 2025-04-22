@@ -4,6 +4,7 @@ using TodoApi.DTOs.TodoDTOs;
 using Microsoft.AspNetCore.Authorization;
 using TodoApi.Common;
 using System.Threading.Tasks;
+using TodoApi.DTOs.ApiResponse;
 
 namespace TodoApi.Controllers;
 
@@ -33,25 +34,40 @@ public class TodoController : CustomControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<ActionResult<string>> RemoveTodo([FromBody] DeleteTodoRequest req){
+    public async Task<ActionResult> RemoveTodo([FromBody] DeleteTodoRequest req)
+    {
+        bool success = await _todoService.DeleteTodoAsync(this.GetUserId(), req.Id);
 
-        string? userId =this.GetUserId();
-        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        ApiResponse apiResponse = new(){SuccessStatus=success};
 
-        bool success = await _todoService.DeleteTodoAsync(userId, req.Id);
+        if (success) return Ok(apiResponse);
 
-        return success ? Ok("Todo Deleted!") : BadRequest("Error occured!");
+        apiResponse.MessageFromServer = "Todo not found!";
+        return BadRequest(apiResponse);
     }
 
     [HttpPut]
-    public ActionResult<string> PutTodo([FromBody] Todo new_todo){
-        bool success = _todoService.UpdateFullTodo(new_todo);
-        return success ? Ok("Todo Fully Updated!") : BadRequest("Error occured!");
+    public async Task<ActionResult> PutTodo([FromBody] Todo new_todo){
+        bool success = await _todoService.DeleteTodoAsync(this.GetUserId(), req.Id);
+
+        ApiResponse apiResponse = new(){SuccessStatus=success};
+
+        if (success) return Ok(apiResponse);
+
+        apiResponse.MessageFromServer = "Todo not found!";
+        return BadRequest(apiResponse);
     }
 
     [HttpPatch]
-    public ActionResult<string> UpdateTodo([FromBody] UpdateTodoRequest data){
-        bool success = _todoService.UpdateField(data.id, data.field, data.data);
-        return success ? Ok("Filed updated!") : BadRequest("Error occured!");
+    public async Task<ActionResult> UpdateTodo([FromBody] UpdateTodoRequest data){
+
+        bool success = await _todoService.UpdateTodoAsync(this.GetUserId(), data);
+
+        ApiResponse apiResponse = new(){SuccessStatus=success};
+
+        if (success) return Ok(apiResponse);
+
+        apiResponse.MessageFromServer = "Todo not found!";
+        return BadRequest(apiResponse);
     }
 }

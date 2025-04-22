@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using MongoDB.Driver;
 using TodoApi.Contexts;
+using TodoApi.DTOs.ApiResponse;
 using TodoApi.DTOs.TodoDTOs;
 using TodoApi.Models;
 
@@ -18,14 +20,15 @@ public class TodoService
         return new GetTodosResponse{Todos = todos};
     }
 
-    public async Task<PostTodoResponse> AddTodoAsync(string userId, PostTodoRequest todoData){
+    public async Task<ApiResponse> AddTodoAsync(string userId, PostTodoRequest todoData){
         
-        PostTodoResponse postTodoResponse = new();
-        if( todoData.Description==null || todoData.Description == ""){
-            postTodoResponse.MessageToClient = "Description must be provided!";
+        ApiResponse apiResponse = new();
+
+        if(todoData.Description==null || todoData.Description == ""){
+            apiResponse.MessageFromServer = "Description must be provided!";
         }
         else if (userId==null){
-            postTodoResponse.MessageToClient = "Invalid userId";
+            apiResponse.MessageFromServer = "Invalid userId";
         }
         else{
             Todo newTodo = new() {
@@ -34,23 +37,35 @@ public class TodoService
                 DeadLine = todoData.DeadLine ?? null
             };
             await _todoCollection.InsertOneAsync(newTodo);
-            postTodoResponse.SuccessStatus = true;
+            apiResponse.SuccessStatus = true;
         }
-        return postTodoResponse;
+        return apiResponse;
     }
 
-    public bool UpdateFullTodo(Todo newTodo){
-        if (newTodo==null) return false;
-        var result = _todoCollection.ReplaceOne(todo => todo.Id == newTodo.Id, newTodo);
+    public async Task<ApiResponse> ReplaceTodoAsync(Todo newTodo){
+        ApiResponse apiResponse = new();
 
-        return result.IsAcknowledged && result.ModifiedCount > 0;
+        if (newTodo==null){
+            apiResponse.MessageFromServer = "Todo data is required!";
+            return apiResponse;
+        }
+        var result = await _todoCollection.ReplaceOneAsync(todo => todo.Id == newTodo.Id, newTodo);
+
+        if(! result.IsAcknowledged && result.ModifiedCount > 0)
+            apiResponse.MessageFromServer = "Todo not found!";
+
+        return apiResponse;
     }
 
-    public bool UpdateField(string id, string fieldName, string data)
+    public async Task<bool> UpdateTodoAsync(string UserId, UpdateTodoRequest requestData)
     {
-        var filter = Builders<Todo>.Filter.Eq("id", id);
-        var update = Builders<Todo>.Update.Set(fieldName, data);
-        var result = _todoCollection.UpdateOne(filter, update);
+        var filter = Builders<Todo>.Filter.And(
+                        Builders<Todo>.Filter.Eq(todo => todo.Id, requestData.Id),
+                        Builders<Todo>.Filter.Eq(todo => todo.UserId, UserId)
+                    );
+
+        var update = Builders<Todo>.Update.Set(requestData.Field, requestData.Data);
+        var result = await _todoCollection.UpdateOneAsync(filter, update);
         
         return result.IsAcknowledged && result.ModifiedCount > 0;
     }
