@@ -1,10 +1,16 @@
+// Importing from DotNet
 using Microsoft.AspNetCore.Mvc;
-using TodoApi.Models;
-using TodoApi.DTOs.TodoDTOs;
 using Microsoft.AspNetCore.Authorization;
+
+// Importing from third party libraries
+using FluentValidation;
+
+// Importing from Application
+using TodoApi.Models;
 using TodoApi.Common;
-using System.Threading.Tasks;
 using TodoApi.DTOs.ApiResponse;
+using TodoApi.DTOs.TodoDTOs;
+using TodoApi.Validators.TodoValidators;
 
 namespace TodoApi.Controllers;
 
@@ -13,9 +19,16 @@ namespace TodoApi.Controllers;
 public class TodoController : CustomControllerBase
 {
     private readonly TodoService _todoService;
+    private readonly IValidator<UpdateTodoRequest> _updateTodoRequestValidator;
 
-    public TodoController(TodoService todoService){
+    public TodoController(
+
+        TodoService todoService,
+        IValidator<UpdateTodoRequest> updateTodoRequestValidator
+
+        ){
         _todoService = todoService;
+        _updateTodoRequestValidator = updateTodoRequestValidator;
     }
 
     [Authorize]
@@ -27,7 +40,7 @@ public class TodoController : CustomControllerBase
 
     [Authorize]
     [HttpPost]
-    public async Task<PostTodoResponse> PostTodo([FromBody] PostTodoRequest todoData)
+    public async Task<ApiResponse> PostTodo([FromBody] PostTodoRequest todoData)
     {
         return await _todoService.AddTodoAsync(this.GetUserId(), todoData);
     }
@@ -47,27 +60,25 @@ public class TodoController : CustomControllerBase
     }
 
     [HttpPut]
-    public async Task<ActionResult> PutTodo([FromBody] Todo new_todo){
-        bool success = await _todoService.DeleteTodoAsync(this.GetUserId(), req.Id);
-
-        ApiResponse apiResponse = new(){SuccessStatus=success};
-
-        if (success) return Ok(apiResponse);
-
-        apiResponse.MessageFromServer = "Todo not found!";
-        return BadRequest(apiResponse);
+    public async Task<ApiResponse> PutTodo([FromBody] Todo new_todo){
+        return await _todoService.ReplaceTodoAsync(new_todo); 
     }
-
+    
+    [Authorize]
     [HttpPatch]
-    public async Task<ActionResult> UpdateTodo([FromBody] UpdateTodoRequest data){
+    public async Task<ActionResult> UpdateTodo([FromBody] UpdateTodoRequest data){        
+        var result = _updateTodoRequestValidator.Validate(data);
 
-        bool success = await _todoService.UpdateTodoAsync(this.GetUserId(), data);
+        if (! result.IsValid){
+            return BadRequest(new ApiResponse{
+                MessageFromServer = result.Errors.FirstOrDefault()?.ErrorMessage
+            });
+        }
+        
+        ApiResponse response = await _todoService.UpdateTodoAsync(this.GetUserId(), data);
 
-        ApiResponse apiResponse = new(){SuccessStatus=success};
+        if (response.SuccessStatus) return Ok(result);
 
-        if (success) return Ok(apiResponse);
-
-        apiResponse.MessageFromServer = "Todo not found!";
-        return BadRequest(apiResponse);
+        return BadRequest(response);
     }
 }
