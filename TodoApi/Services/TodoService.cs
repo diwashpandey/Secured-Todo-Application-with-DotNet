@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Xml.XPath;
 using MongoDB.Driver;
 using TodoApi.Contexts;
 using TodoApi.DTOs.ApiResponse;
@@ -57,17 +58,27 @@ public class TodoService
         return apiResponse;
     }
 
-    public async Task<bool> UpdateTodoAsync(string UserId, UpdateTodoRequest requestData)
+    public async Task<ApiResponse> UpdateTodoAsync(string userId, UpdateTodoRequest requestData)
     {
+        ApiResponse apiResponse = new();
+
+        if (userId==null || userId == ""){
+            apiResponse.MessageFromServer = "Invalid User!";
+            return apiResponse;
+        }
+
         var filter = Builders<Todo>.Filter.And(
                         Builders<Todo>.Filter.Eq(todo => todo.Id, requestData.Id),
-                        Builders<Todo>.Filter.Eq(todo => todo.UserId, UserId)
+                        Builders<Todo>.Filter.Eq(todo => todo.UserId, userId)
                     );
 
         var update = Builders<Todo>.Update.Set(requestData.Field, requestData.Data);
         var result = await _todoCollection.UpdateOneAsync(filter, update);
         
-        return result.IsAcknowledged && result.ModifiedCount > 0;
+        apiResponse.SuccessStatus = result.IsAcknowledged && result.ModifiedCount > 0;
+        
+        if (!apiResponse.SuccessStatus) apiResponse.MessageFromServer = "Todo not found!";
+        return apiResponse;
     }
 
     public async Task<bool> DeleteTodoAsync(string userId, string id)
