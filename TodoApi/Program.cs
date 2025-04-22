@@ -1,12 +1,23 @@
+// Importing from DotNet
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+
+// Importing from third party libraries
+using FluentValidation;
+
+// Importing from application
 using TodoApi.Contexts;
 using TodoApi.Services;
 using TodoApi.Settings;
+using TodoApi.Validators.TodoValidators;
+using TodoApi.DTOs.TodoDTOs;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configuring Database settings
 builder.Services.Configure<TodoDatabaseSettings>(builder.Configuration.GetSection("TodoDatabaseSettings"));
+
+// Configuring JWT settings
 builder.Services.Configure<JWTSettings>(builder.Configuration.GetSection("JWT"));
 
 // Add services to the container.
@@ -17,9 +28,12 @@ builder.Services.AddOpenApi();
 // Adding Contexts to the builder
 builder.Services.AddSingleton<TodoDBContext>();
 
+// Adding Validator
+builder.Services.AddTransient<IValidator<UpdateTodoRequest>, UpdateTodoRequestValidator>();
+
 // Adding Services to the builder
-builder.Services.AddScoped<TodoService>();
-builder.Services.AddScoped<UserAuthService>();
+builder.Services.AddSingleton<TodoService>();
+builder.Services.AddSingleton<UserAuthService>();
 
 builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", options => {
 
