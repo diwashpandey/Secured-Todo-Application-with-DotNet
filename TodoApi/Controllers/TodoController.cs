@@ -20,15 +20,18 @@ public class TodoController : CustomControllerBase
 {
     private readonly TodoService _todoService;
     private readonly IValidator<UpdateTodoRequest> _updateTodoRequestValidator;
+    private readonly IValidator<PostTodoRequest> _postTodoRequestValidator;
 
     public TodoController(
 
         TodoService todoService,
-        IValidator<UpdateTodoRequest> updateTodoRequestValidator
+        IValidator<UpdateTodoRequest> updateTodoRequestValidator,
+        IValidator<PostTodoRequest> postTodoRequestValidator
 
         ){
         _todoService = todoService;
         _updateTodoRequestValidator = updateTodoRequestValidator;
+        _postTodoRequestValidator = postTodoRequestValidator;
     }
 
     [Authorize]
@@ -42,6 +45,15 @@ public class TodoController : CustomControllerBase
     [HttpPost]
     public async Task<ApiResponse> PostTodo([FromBody] PostTodoRequest todoData)
     {
+        var validated_data = _postTodoRequestValidator.Validate(todoData);
+
+        if (!validated_data.IsValid)
+        {
+            return new ApiResponse{
+                MessageFromServer = validated_data.Errors.FirstOrDefault()?.ErrorMessage
+            };
+        }
+
         return await _todoService.AddTodoAsync(this.GetUserId(), todoData);
     }
 

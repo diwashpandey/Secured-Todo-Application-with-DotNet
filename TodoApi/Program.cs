@@ -30,6 +30,7 @@ builder.Services.AddSingleton<TodoDBContext>();
 
 // Adding Validator
 builder.Services.AddTransient<IValidator<UpdateTodoRequest>, UpdateTodoRequestValidator>();
+builder.Services.AddTransient<IValidator<PostTodoRequest>, PostTodoRequestValidator>();
 
 // Adding Services to the builder
 builder.Services.AddSingleton<TodoService>();
