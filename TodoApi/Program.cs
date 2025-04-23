@@ -11,6 +11,8 @@ using TodoApi.Services;
 using TodoApi.Settings;
 using TodoApi.Validators.TodoValidators;
 using TodoApi.DTOs.TodoDTOs;
+using TodoApi.DTOs.UserDTOs;
+using TodoApi.Validators.UserValidators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +33,9 @@ builder.Services.AddSingleton<TodoDBContext>();
 // Adding Validator
 builder.Services.AddTransient<IValidator<UpdateTodoRequest>, UpdateTodoRequestValidator>();
 builder.Services.AddTransient<IValidator<PostTodoRequest>, PostTodoRequestValidator>();
+builder.Services.AddTransient<IValidator<SignupRequest>, SignupRequestValidator>();
+builder.Services.AddTransient<IValidator<LoginRequest>, LoginRequestValidator>();
+
 
 // Adding Services to the builder
 builder.Services.AddSingleton<TodoService>();

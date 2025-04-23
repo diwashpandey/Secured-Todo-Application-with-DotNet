@@ -4,7 +4,6 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace TodoApi.Models;
 
 public class User{
-
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id {get; set;} = string.Empty;
@@ -13,5 +12,4 @@ public class User{
     public string Email {get; set;} = string.Empty;
     public string RefreshToken {get; set;} = string.Empty;
     public DateTime TokenExpiryTime {get; set;}
-
 }

@@ -10,6 +10,7 @@ using TodoApi.Contexts;
 using TodoApi.Models;
 using TodoApi.Settings;
 using TodoApi.DTOs.UserDTOs;
+using TodoApi.DTOs.ApiResponse;
 
 namespace TodoApi.Services;
 
@@ -54,15 +55,14 @@ public class UserAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<SignupResponse> RegisterUserAsync([FromBody] SignupRequest request)
+    public async Task<ApiResponse> RegisterUserAsync([FromBody] SignupRequest request)
     {
         var userExists = await _userCollection.Find(u => u.Username == request.Username).AnyAsync();
         if (userExists)
         {
-            return new SignupResponse
+            return new ApiResponse
             {
-                SuccessStatus = false,
-                MessageToClient = "Username already exists"
+                MessageFromServer = "Username already exists"
             };
         }
 
@@ -71,25 +71,23 @@ public class UserAuthService
             Username = request.Username,
             Email = request.Email
         };
+
         var hashedPassword = _passwordHasher.HashPassword(newUser, request.RawPassword);
         newUser.HashedPassword = hashedPassword;
 
         await _userCollection.InsertOneAsync(newUser);
 
-        return new SignupResponse { SuccessStatus = true };
+        return new ApiResponse { SuccessStatus = true };
     }
 
-    public async Task<LoginResponse> LoginUserAsync([FromBody] LoginRequest request)
+    public async Task<ApiResponse> LoginUserAsync([FromBody] LoginRequest request)
     {
         User user = await _userCollection.Find(u => u.Username == request.Username).FirstOrDefaultAsync();
 
         if (! this.IsValidUserAsync(user, request.Password))
         {
-            return new LoginResponse
-            {
-                Authenticated = false,
-                AccessToken = null,
-                RefreshToken = null
+            return new ApiResponse{
+                MessageFromServer = "Username or password didn't match"
             };
         }
 
@@ -101,11 +99,14 @@ public class UserAuthService
                         .Set(u=> u.TokenExpiryTime, DateTime.Now.AddDays(7));
         await _userCollection.UpdateOneAsync(u => u.Username == user.Username, update);
 
-        return new LoginResponse
-        {
-            Authenticated = true,
-            AccessToken = accessToken,
-            RefreshToken = refreshToken
+        return new ApiResponse<LoginResponse>{
+            SuccessStatus = true,
+            Data = new LoginResponse
+            {
+                Authenticated = true,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            }
         };
     }
 
