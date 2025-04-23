@@ -43,21 +43,6 @@ public class TodoService
         return apiResponse;
     }
 
-    public async Task<ApiResponse> ReplaceTodoAsync(Todo newTodo){
-        ApiResponse apiResponse = new();
-
-        if (newTodo==null){
-            apiResponse.MessageFromServer = "Todo data is required!";
-            return apiResponse;
-        }
-        var result = await _todoCollection.ReplaceOneAsync(todo => todo.Id == newTodo.Id, newTodo);
-
-        if(! result.IsAcknowledged && result.ModifiedCount > 0)
-            apiResponse.MessageFromServer = "Todo not found!";
-
-        return apiResponse;
-    }
-
     public async Task<ApiResponse> UpdateTodoAsync(string userId, UpdateTodoRequest requestData)
     {
         ApiResponse apiResponse = new();

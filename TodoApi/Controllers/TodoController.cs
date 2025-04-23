@@ -70,11 +70,6 @@ public class TodoController : CustomControllerBase
         apiResponse.MessageFromServer = "Todo not found!";
         return BadRequest(apiResponse);
     }
-
-    [HttpPut]
-    public async Task<ApiResponse> PutTodo([FromBody] Todo new_todo){
-        return await _todoService.ReplaceTodoAsync(new_todo); 
-    }
     
     [Authorize]
     [HttpPatch]
