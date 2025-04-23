@@ -7,8 +7,8 @@ public class PostTodoRequestValidator : AbstractValidator<PostTodoRequest>
 {
     public PostTodoRequestValidator()
     {
-        RuleFor(x => x.Description).NotEmpty().WithMessage("Please provide the description!");
-        RuleFor(x => x.Description).NotNull().WithMessage("Please provide the description!");
-        RuleFor(x => x.Description).MinimumLength(2).MaximumLength(500).WithMessage("Description length should be between 2 to 500 characters");
+        RuleFor(x => x.Description).NotEmpty().WithMessage("Please provide the description!")
+        .MinimumLength(3).WithMessage("Description must be atlease 3 characters")
+        .MaximumLength(500).WithMessage("Description cannot extend more than 500 characters");
     }
 }
