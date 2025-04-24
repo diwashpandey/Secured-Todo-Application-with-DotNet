@@ -8,6 +8,7 @@ public class ApiResponse
 {
     public bool SuccessStatus {get; set;} = false;
     public string? MessageFromServer {get; set;}
+    public string? TraceId {get; set;}
 }
 
 public class ApiResponse<TData> : ApiResponse
