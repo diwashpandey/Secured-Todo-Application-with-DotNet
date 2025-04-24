@@ -9,7 +9,9 @@ using TodoApi.DTOs.UserDTOs;
 using TodoApi.Common;
 using TodoApi.Services;
 using TodoApi.Validators.UserValidators;
+using TodoApi.Exceptions;
 using TodoApi.DTOs.ApiResponse;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 
 namespace TodoApi.Controllers;
@@ -26,44 +28,38 @@ public class UserController : CustomControllerBase
         UserAuthService userAuthService,
         IValidator<SignupRequest> signupRequestValidator,
         IValidator<LoginRequest> _loginRequestValidator
-        )
+    )
     {
         _userAuthService = userAuthService;
         _signupRequestValidator = signupRequestValidator;
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<ApiResponse>> Login([FromBody] LoginRequest user)
+    public async Task<ApiResponse> Login([FromBody] LoginRequest user)
     {
-        var validatedResult = _loginRequestValidator.Validate(user);
+        var validationResult = _loginRequestValidator.Validate(user);
 
-        if (!validatedResult.IsValid)
+        if (!validationResult.IsValid)
         {
-            return BadRequest(new ApiResponse{
-                MessageFromServer = validatedResult.Errors.FirstOrDefault()?.ErrorMessage
-            });
+            string errorMessage = validationResult.Errors.FirstOrDefault()?.ErrorMessage ?? "Invalid input!";
+            throw new BadRequestException(errorMessage);
         }
 
-        var result =  await _userAuthService.LoginUserAsync(user);
-        return result.SuccessStatus ? Ok(result) : BadRequest(result);
+        return await _userAuthService.LoginUserAsync(user);
     }
 
     [HttpPost("signup")]
-    public async Task<ActionResult> SignupUser([FromBody] SignupRequest userData)
+    public async Task<ApiResponse> SignupUser([FromBody] SignupRequest userData)
     {
         var validationResult = _signupRequestValidator.Validate(userData);
 
         if (!validationResult.IsValid)
         {
-            return BadRequest(new ApiResponse
-            {
-                MessageFromServer = validationResult.Errors.FirstOrDefault()?.ErrorMessage
-            });
+            string errorMessage = validationResult.Errors.FirstOrDefault()?.ErrorMessage ?? "Invalid input!";
+            throw new BadRequestException(errorMessage);
         }
 
-        ApiResponse result = await _userAuthService.RegisterUserAsync(userData);
-
-        return result.SuccessStatus ? Ok(result) : BadRequest(result);
+        return await _userAuthService.RegisterUserAsync(userData);
     }
 
     [HttpPost("renew-access")]
