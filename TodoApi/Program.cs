@@ -13,6 +13,7 @@ using TodoApi.Validators.TodoValidators;
 using TodoApi.DTOs.TodoDTOs;
 using TodoApi.DTOs.UserDTOs;
 using TodoApi.Validators.UserValidators;
+using TodoApi.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,5 +72,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 app.Run();
