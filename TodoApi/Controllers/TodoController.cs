@@ -6,11 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using FluentValidation;
 
 // Importing from Application
-using TodoApi.Models;
 using TodoApi.Common;
 using TodoApi.DTOs.ApiResponse;
 using TodoApi.DTOs.TodoDTOs;
-using TodoApi.Validators.TodoValidators;
+using TodoApi.Exceptions;
 
 namespace TodoApi.Controllers;
 
@@ -36,7 +35,7 @@ public class TodoController : CustomControllerBase
 
     [Authorize]
     [HttpGet]
-    public async Task<GetTodosResponse> GetTodosByUser()
+    public async Task<ApiResponse<GetTodosResponse>> GetTodosByUser()
     {
         return await _todoService.GetTodosByUserAsync(this.GetUserId());
     }
@@ -49,9 +48,8 @@ public class TodoController : CustomControllerBase
 
         if (!validated_data.IsValid)
         {
-            return new ApiResponse{
-                MessageFromServer = validated_data.Errors.FirstOrDefault()?.ErrorMessage
-            };
+            var errorMessage = validated_data.Errors.FirstOrDefault()?.ErrorMessage ?? "Wrong Input";
+            throw new BadRequestException(errorMessage);
         }
 
         return await _todoService.AddTodoAsync(this.GetUserId(), todoData);
@@ -59,33 +57,22 @@ public class TodoController : CustomControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<ActionResult> RemoveTodo([FromBody] DeleteTodoRequest req)
+    public async Task<ApiResponse> RemoveTodo([FromBody] DeleteTodoRequest req)
     {
-        bool success = await _todoService.DeleteTodoAsync(this.GetUserId(), req.Id);
-
-        ApiResponse apiResponse = new(){SuccessStatus=success};
-
-        if (success) return Ok(apiResponse);
-
-        apiResponse.MessageFromServer = "Todo not found!";
-        return BadRequest(apiResponse);
+        return await _todoService.DeleteTodoAsync(this.GetUserId(), req.Id);
     }
     
     [Authorize]
     [HttpPatch]
-    public async Task<ActionResult> UpdateTodo([FromBody] UpdateTodoRequest data){        
-        var result = _updateTodoRequestValidator.Validate(data);
+    public async Task<ApiResponse> UpdateTodo([FromBody] UpdateTodoRequest data){        
+        var validated_data = _updateTodoRequestValidator.Validate(data);
 
-        if (! result.IsValid){
-            return BadRequest(new ApiResponse{
-                MessageFromServer = result.Errors.FirstOrDefault()?.ErrorMessage
-            });
+        if (!validated_data.IsValid)
+        {
+            var errorMessage = validated_data.Errors.FirstOrDefault()?.ErrorMessage ?? "Wrong Input";
+            throw new BadRequestException(errorMessage);
         }
         
-        ApiResponse response = await _todoService.UpdateTodoAsync(this.GetUserId(), data);
-
-        if (response.SuccessStatus) return Ok(result);
-
-        return BadRequest(response);
+        return await _todoService.UpdateTodoAsync(this.GetUserId(), data);
     }
 }

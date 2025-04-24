@@ -1,36 +1,34 @@
-using System.Threading.Tasks;
-using System.Xml.XPath;
+// Importing from third party libraries
+using Microsoft.AspNetCore.Http.HttpResults;
 using MongoDB.Driver;
+
+// Importing from application
 using TodoApi.Contexts;
 using TodoApi.DTOs.ApiResponse;
 using TodoApi.DTOs.TodoDTOs;
+using TodoApi.Exceptions;
 using TodoApi.Models;
 
-public class TodoService
+public class TodoService(TodoDBContext context)
 {
-    private readonly IMongoCollection<Todo> _todoCollection;
-    public TodoService(TodoDBContext context)
-    {
-        _todoCollection = context.Todos;
-    }
+    private readonly IMongoCollection<Todo> _todoCollection = context.Todos;
 
-    public async Task<GetTodosResponse> GetTodosByUserAsync(string? userId)
+    public async Task<ApiResponse<GetTodosResponse>> GetTodosByUserAsync(string? userId)
     {
         var filter = Builders<Todo>.Filter.Eq(todo => todo.UserId, userId);
         List<Todo> todos =  await _todoCollection.Find(filter).ToListAsync();
-        return new GetTodosResponse{Todos = todos};
+        GetTodosResponse data = new() { Todos = todos};
+
+        return new ApiResponse<GetTodosResponse> {
+            SuccessStatus=true,
+            Data = data
+        };
     }
 
     public async Task<ApiResponse> AddTodoAsync(string userId, PostTodoRequest todoData){
-        
-        ApiResponse apiResponse = new();
 
-        if(todoData.Description==null || todoData.Description == ""){
-            apiResponse.MessageFromServer = "Description must be provided!";
-        }
-        else if (userId==null){
-            apiResponse.MessageFromServer = "Invalid userId";
-        }
+        if (userId==null) throw new UnauthorizedException("Unauthorized request!");
+
         else{
             Todo newTodo = new() {
                 UserId = userId,
@@ -38,19 +36,15 @@ public class TodoService
                 DeadLine = todoData.DeadLine ?? null
             };
             await _todoCollection.InsertOneAsync(newTodo);
-            apiResponse.SuccessStatus = true;
         }
-        return apiResponse;
+        return new ApiResponse{SuccessStatus=true};
     }
 
     public async Task<ApiResponse> UpdateTodoAsync(string userId, UpdateTodoRequest requestData)
     {
-        ApiResponse apiResponse = new();
-
-        if (userId==null || userId == ""){
-            apiResponse.MessageFromServer = "Invalid User!";
-            return apiResponse;
-        }
+        if (userId==null || userId == "")
+            throw new UnauthorizedException("Invalid User!");
+        
 
         var filter = Builders<Todo>.Filter.And(
                         Builders<Todo>.Filter.Eq(todo => todo.Id, requestData.Id),
@@ -60,13 +54,13 @@ public class TodoService
         var update = Builders<Todo>.Update.Set(requestData.Field, requestData.Data);
         var result = await _todoCollection.UpdateOneAsync(filter, update);
         
-        apiResponse.SuccessStatus = result.IsAcknowledged && result.ModifiedCount > 0;
+        if (result.IsAcknowledged && result.ModifiedCount > 0)
+            return new ApiResponse{SuccessStatus = true};
         
-        if (!apiResponse.SuccessStatus) apiResponse.MessageFromServer = "Todo not found!";
-        return apiResponse;
+        throw new NotFoundException("Todo not found!");
     }
 
-    public async Task<bool> DeleteTodoAsync(string userId, string id)
+    public async Task<ApiResponse> DeleteTodoAsync(string userId, string id)
     {
         var filter = Builders<Todo>.Filter.And(
           Builders<Todo>.Filter.Eq(t => t.UserId, userId),  
@@ -74,6 +68,12 @@ public class TodoService
         );
 
         var result =await _todoCollection.DeleteOneAsync(filter);
-        return result.DeletedCount > 0;
+
+        if (result.DeletedCount > 0)
+        {
+            return new ApiResponse{SuccessStatus=true};
+        }
+        
+        throw new NotFoundException("Todo not found!");
     }
 }
