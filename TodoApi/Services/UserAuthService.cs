@@ -82,7 +82,7 @@ public class UserAuthService
         User user = await _userCollection.Find(u => u.Username == request.Username).FirstOrDefaultAsync();
 
         if (! this.IsValidUserAsync(user, request.Password))
-            throw new NotFoundException("Username or password didn't match");
+            throw new BadRequestException("Username or password didn't match");
 
         var accessToken = GenerateJwtToken(user, DateTime.Now.AddMinutes(15));
         var refreshToken = Guid.NewGuid().ToString();

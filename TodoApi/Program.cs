@@ -36,7 +36,7 @@ builder.Services.AddTransient<IValidator<UpdateTodoRequest>, UpdateTodoRequestVa
 builder.Services.AddTransient<IValidator<PostTodoRequest>, PostTodoRequestValidator>();
 builder.Services.AddTransient<IValidator<SignupRequest>, SignupRequestValidator>();
 builder.Services.AddTransient<IValidator<LoginRequest>, LoginRequestValidator>();
-
+builder.Services.AddTransient<IValidator<RenewTokenRequest>, RenewTokenRequestValidator>();
 
 // Adding Services to the builder
 builder.Services.AddSingleton<TodoService>();
@@ -65,6 +65,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
 }
 
 app.UseHttpsRedirection();

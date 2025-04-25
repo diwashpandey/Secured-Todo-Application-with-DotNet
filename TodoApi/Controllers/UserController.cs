@@ -21,16 +21,20 @@ public class UserController : CustomControllerBase
     private readonly UserAuthService _userAuthService;
     private readonly IValidator<SignupRequest> _signupRequestValidator;
     private readonly IValidator<LoginRequest> _loginRequestValidator;
+    private readonly IValidator<RenewTokenRequest> _renewTokenRequestValidator;
+    
 
     public UserController(
         UserAuthService userAuthService,
         IValidator<SignupRequest> signupRequestValidator,
-        IValidator<LoginRequest> loginRequestValidator
+        IValidator<LoginRequest> loginRequestValidator,
+        IValidator<RenewTokenRequest> renewTokenRequestValidator
     )
     {
         _userAuthService = userAuthService;
         _signupRequestValidator = signupRequestValidator;
         _loginRequestValidator = loginRequestValidator;
+        _renewTokenRequestValidator = renewTokenRequestValidator;
     }
 
     [HttpPost("login")]
@@ -63,6 +67,14 @@ public class UserController : CustomControllerBase
 
     [HttpPost("renew-access")]
     public async Task<RenewTokenResponse> RenewToken([FromBody] RenewTokenRequest renewTokenRequest){
+        var validationResult = _renewTokenRequestValidator.Validate(renewTokenRequest);
+
+        if (!validationResult.IsValid)
+        {   
+            string errorMessage = validationResult.Errors.FirstOrDefault()?.ErrorMessage ?? "Invalid input!";
+            throw new BadRequestException(errorMessage);
+        }
+
         return await _userAuthService.RenewAccessTokenAsync(renewTokenRequest);
     }
 }
