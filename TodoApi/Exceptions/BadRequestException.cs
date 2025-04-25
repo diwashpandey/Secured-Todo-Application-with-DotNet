@@ -1,5 +1,5 @@
 namespace TodoApi.Exceptions;
 public class BadRequestException(string errorMessage) : Exception(errorMessage)
 {
-    public int StatusCode {get;} = 404;
+    public static int StatusCode {get;} = 400;
 }

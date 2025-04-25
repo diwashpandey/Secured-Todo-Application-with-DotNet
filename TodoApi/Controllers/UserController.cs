@@ -8,10 +8,8 @@ using FluentValidation;
 using TodoApi.DTOs.UserDTOs;
 using TodoApi.Common;
 using TodoApi.Services;
-using TodoApi.Validators.UserValidators;
 using TodoApi.Exceptions;
 using TodoApi.DTOs.ApiResponse;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 
 namespace TodoApi.Controllers;
@@ -27,11 +25,12 @@ public class UserController : CustomControllerBase
     public UserController(
         UserAuthService userAuthService,
         IValidator<SignupRequest> signupRequestValidator,
-        IValidator<LoginRequest> _loginRequestValidator
+        IValidator<LoginRequest> loginRequestValidator
     )
     {
         _userAuthService = userAuthService;
         _signupRequestValidator = signupRequestValidator;
+        _loginRequestValidator = loginRequestValidator;
     }
 
     [HttpPost("login")]
@@ -44,7 +43,7 @@ public class UserController : CustomControllerBase
             string errorMessage = validationResult.Errors.FirstOrDefault()?.ErrorMessage ?? "Invalid input!";
             throw new BadRequestException(errorMessage);
         }
-
+        
         return await _userAuthService.LoginUserAsync(user);
     }
 
